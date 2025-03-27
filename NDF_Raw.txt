@@ -1,0 +1,328 @@
+import requests
+import cx_Oracle
+import json
+from datetime import datetime,timedelta
+import time
+import datetime as dt
+import os
+import pandas as pd 
+os.environ['NLS_LANG'] = '.UTF8'
+
+
+GET_APIS_URL = 'https://login.eloqua.com/id'
+REST_API_URL = 'https://secure.p06.eloqua.com/API/REST/2.0/'
+FORM_DATA_URL = REST_API_URL + 'data/form/{id}'
+
+dsn_tns = cx_Oracle.makedsn(host= '',port= 1521, service_name= '')
+conn =  cx_Oracle.connect(user= '',password = '', dsn=dsn_tns)
+cur = conn.cursor()  #connected
+
+def truncate_table():
+    sql_qu1 = ''' 
+   
+    truncate table SMARTFOCUS.JS_ORACLE_NDF_API_RAW_HRUK_STG
+    
+    '''
+    try:
+        cur.execute(sql_qu1) #need to change the table name
+    except cx_Oracle.DatabaseError as err:
+            error = err.args[0]
+            if error.code == 942:
+                print('Oracle error message:', error.message)
+                print('As DROP statement continuing')
+            else:
+                 raise err     
+
+truncate_table()
+
+
+end_date = datetime.utcnow().replace(minute=0, hour=0, second=0, microsecond=0)  #Todays date
+start_date = end_date - timedelta(days=1)   # Yesterdays date
+
+
+GET_APIS_URL = 'https://login.eloqua.com/id'
+REST_API_URL = 'https://secure.p06.eloqua.com/API/REST/{version}/'
+FORM_DATA_URL = REST_API_URL + 'data/form/{id}?orderby=submittedAt DESC'
+
+url = FORM_DATA_URL + '&count={count}&page={page}'
+if start_date and end_date:
+    url = url + '&startAt={startAt}&endAt={endAt}'
+
+for x in range(1,150):
+    page = x 
+    if start_date and end_date:
+        req = requests.get(
+            url.format(
+                version=2.0,
+                id =138,
+                count=1000,
+                page=page,
+                startAt=int(time.mktime(start_date.timetuple())),
+                endAt=int(time.mktime(end_date.timetuple()))
+            ),
+            auth=('yelluk\jaspreet.singh', '') 
+        )
+    else:
+        req = requests.get(
+            url.format(
+                version=2.0,
+                id=138,
+                count=1000,
+                page=page,
+            ),
+            auth=('yelluk\jaspreet.singh', 'SmallPox8-') 
+        )
+    # need to build something to catch HTTP response errors
+    py_data = req.json()
+    try:
+        py_data['elements']
+    except TypeError as err:
+        pprint.pprint(py_data)
+        raise err
+
+    # Break if there are no more records
+    if not py_data['elements']:
+        break
+
+    
+
+    for value in py_data['elements']:
+        try:
+            Submitted_At  = datetime.utcfromtimestamp(int(value['submittedAt'])).strftime('%Y-%m-%d %H:%M:%S')
+        except:
+            Submitted_At = None
+
+        for v in value['fieldValues']:
+            if v['id'] =='1828':
+                try:
+                    company_name = v['value']
+                except:
+                    company_name = None
+            if v['id'] == '1841':
+                try:
+                    Account_Number = v['value']
+                except:
+                    Account_Number = None                    
+            if v['id']=='1829':
+                try:
+                    Phone_1= v['value']
+                except:
+                    Phone_1 = v['value'] 
+            if v['id'] == '1830':
+                try:
+                    Phone_2 = v['value']
+                except:
+                    Phone_2 = None
+            if v['id'] == '1831':
+                try:
+                    Phone_3 = v['value']
+                except:
+                    Phone_3 = None
+            if v['id'] == '1832':
+                try:
+                    Website = v['value']
+                except:
+                    Website = None                
+            if v['id'] =='1838':
+                try:
+                    Image_url = v['value']
+                except:
+                    Image_url = None
+            if v['id'] == '1827':
+                try:
+                    Material_Type = v['value']
+                except:
+                    Material_Type = None
+            if v['id'] == '1839':
+                try:
+                    Telesales_Rep = v['value']
+                except:
+                    Telesales_Rep = None
+            if v['id'] == '1840':
+                try:
+                    Advert_URL = v['value']
+                except:
+                    Advert_URL = None
+            if v['id'] == '1833':
+                try:
+                    Address = v['value']
+                except:
+                    Address = None
+            if v['id'] == '1834':
+                try:
+                    Address_2 = v['value']
+                except:
+                    Address_2 = None
+            if v['id'] == '1835':
+                try:
+                    Town = v['value']
+                except:
+                    Town = None
+            if v['id'] == '1836':
+                try:
+                    Postcode = v['value']
+                except:
+                    Postcode = None
+            if v['id'] == '1837':
+                try:
+                    Email = v['value']
+                except:
+                    Email = None
+                
+            if v['id'] == '1842':
+                try:
+                    Additional_Information = v['value']
+                except:
+                    Additional_Information = None
+            
+            if v['id']  == '1843':
+                try:
+                    Submitted_by = v['value']
+                except:
+                    Submitted_by = None
+            if v['id'] == '1853':
+                try:
+                    Submitted_ID = v['value']
+                except:
+                    Submitted_ID = None
+            if v['id'] == '1854':
+                try:
+                    Submitted_Manger_ID = v['value']
+                except:
+                    Submitted_Manger_ID = None 
+
+                        
+                #print(Submitted_by,Submitted_ID,Submitted_Manger_ID)
+                #rint(company_name,Phone_1,Phone_2,Phone_3,Website,Image_url,Submitted_by,Material_Type,Telesales_Rep,Advert_URL,Address,Address_2,Postcode,Email,Submitted_ID,Submitted_Manger_ID,Additional_Information)
+       
+       
+        def dynamic_data_entry():
+            rows = (Submitted_At,company_name,Phone_1,Phone_2,Phone_3,Website,Image_url,
+            Submitted_by,Material_Type,Telesales_Rep,Advert_URL,Address,Address_2,Town,Postcode,Email,Submitted_ID,Submitted_Manger_ID,Additional_Information)
+
+            cur.prepare('insert into smartfocus.JS_ORACLE_NDF_API_RAW_HRUK_STG values(:Submitted_At,:company_name,:Phone_1,:Phone_2,:Phone_3,:Website,:Image_url,:Submitted_by,:Material_Type,:Telesales_Rep,:Advert_URL,:Address,:Address_2,:Town,:Postcode,:Email,:Submitted_ID,:Submitted_Manger_ID,:Additional_Information)')
+
+            cur.execute(None,{
+                'Submitted_At': rows[0],
+                'company_name': rows[1],
+                'Phone_1': rows[2],
+                'Phone_2': rows[3],
+                'Phone_3': rows[4],
+                'Website': rows[5],
+                'Image_url': rows[6],
+                'Submitted_by': rows[7],
+                'Material_Type': rows[8],
+                'Telesales_Rep': rows[9],
+                'Advert_URL': rows[10],
+                'Address': rows[11],
+                'Address_2': rows[12],
+                'Town': rows[13],
+                'Postcode': rows[14],
+                'Email': rows[15],
+                'Submitted_ID': rows[16],
+                'Submitted_Manger_ID': rows[17],
+                'Additional_Information': rows[18]
+                
+        }
+        )
+        dynamic_data_entry()
+def merger_sql():
+    sql_query = ( '''
+        
+        merge into smartfocus.JS_Oracle_NDF_API_Raw_HRUK tbl
+            using (
+        select Distinct
+            TO_DATE(Submitted_at,'yyyy/mm/dd hh24:mi:ss') Submitted_at
+            ,company_name 
+            ,Phone_1
+            ,Phone_2 
+            ,Phone_3 
+            ,Website 
+            ,Image_Url 
+            ,Submitted_by
+            ,Material_Type 
+            ,Telesales_Rep 
+            ,Advert_URL  
+            ,Address  
+            ,Address_2  
+            ,Town  
+            ,Postcode  
+            ,Email
+            ,Submitted_by_ID
+            ,submitted_by_Manager_id
+            ,ADDITIONAL_INFORMATION
+            
+        from smartfocus.JS_Oracle_NDF_API_Raw_HRUK_Stg  
+        )stg
+        on (tbl.company_name = stg.company_name
+            and tbl.submitted_At = stg.submitted_At
+
+        )
+
+
+        when not matched then
+            insert
+            (
+            Submitted_at
+            ,tbl.company_name 
+            ,tbl.Phone_1
+            ,tbl.Phone_2 
+            ,tbl.Phone_3 
+            ,tbl.Website 
+            ,tbl.Image_Url 
+            ,tbl.Submitted_by
+            ,tbl.Material_Type 
+            ,tbl.Telesales_Rep 
+            ,tbl.Advert_URL  
+            ,tbl.address  
+            ,tbl.Address_2  
+            ,tbl.Town  
+            ,tbl.Postcode  
+            ,tbl.Email
+            ,Submitted_by_ID
+            ,submitted_by_Manager_id
+            ,ADDITIONAL_INFORMATION
+        )
+        values 
+        (
+            stg.Submitted_at
+            ,stg.company_name 
+            ,stg.Phone_1
+            ,stg.Phone_2 
+            ,stg.Phone_3 
+            ,stg.Website 
+            ,stg.Image_Url 
+            ,stg.Submitted_by
+            ,stg.Material_Type 
+            ,stg.Telesales_Rep 
+            ,stg.Advert_URL  
+            ,stg.address  
+            ,stg.Address_2  
+            ,stg.Town  
+            ,stg.Postcode  
+            ,stg.Email
+            ,stg.Submitted_by_ID
+            ,stg.submitted_by_Manager_id
+            ,stg.ADDITIONAL_INFORMATION
+            )
+        
+    ''') 
+
+    try:
+        cur.execute(sql_query)
+    except cx_Oracle.DatabaseError as err:
+            error = err.args[0]
+            if error.code == 942:
+                print('Oracle error message:', error.message)
+                print('As DROP statement continuing')
+            else:
+                raise err
+
+merger_sql()
+conn.commit()
+conn.close()
+    
+
+
+
+

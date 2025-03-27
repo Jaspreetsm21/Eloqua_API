@@ -1,0 +1,123 @@
+from collections import namedtuple, defaultdict
+from datetime import datetime,timedelta
+import requests
+import pprint
+import os
+import time
+import datetime as dt
+os.environ['NLS_LANG'] = '.UTF8'
+
+from trustpilot import client
+import pandas as pd
+import cx_Oracle
+
+dsn_tns = cx_Oracle.makedsn(host= '',port= 1521, service_name= '')
+conn =  cx_Oracle.connect(user= '',password = '', dsn=dsn_tns)
+cur = conn.cursor()  #connected
+
+for x in range(1,49):
+    x =50000*x
+    #print(x)
+    GET_APIS_URL = 'https://login.eloqua.com/id'
+    REST_API_URL = 'https://secure.p06.eloqua.com/API/Bulk/2.0/syncs/2009676/DATA'
+    FORM_DATA_URL = REST_API_URL + '?limit=50000&offset='+ str(x)
+    #print(FORM_DATA_URL)
+
+
+    req = requests.get(FORM_DATA_URL,auth=('yelluk\jaspreet.singh', 'SmallPox8-') )
+    py_data = req.json()
+    #print(py_data)
+
+    for value in py_data['items']:
+
+        try:
+            Sap_id = value['Id']
+        except:
+            Sap_id = None 
+        try:
+            Contact_id = value['ContactID']
+        except:
+            Contact_id = None
+        try:
+            Email = value['EmailAddress']
+        except:
+            Email = None
+        try:
+            Rating = value['Rating']
+        except:
+            Rating = None
+        try:
+            CreatedDt = value['CreatedAcc']
+        except:
+            CreatedDt = None
+        print(Sap_id,Email ,Rating,Contact_id,CreatedDt)
+
+
+        def dynamic_data_entry():
+            rows = (Sap_id,Email ,Rating,Contact_id,CreatedDt)
+
+                
+            #Perpare tells sql which Columns you are inserting , again cur is the way we talk to oracle
+            cur.prepare( 'insert into SMARTFOCUS.JS_Eloqua_Rating_Stg values(:Sap_id, :Email, :Rating,:Contact_id,:CreatedDt)')
+            #execute means run 
+            cur.execute(None,  {
+            'Sap_id':rows[0],
+            'Email':rows[1],
+            'Rating': rows[2],
+            'Contact_id': rows[3],
+            'CreatedDt': rows[4]        
+        }
+        )
+        dynamic_data_entry()
+             #print(Sap_id,Email,Rating)
+#     def merger_sql():
+#         sql_query = ( '''
+            
+#             merge into smartfocus.JS_Eloqua_Rating tbl
+#                 using (
+#                 select Distinct
+#             Sap_id 
+#                 ,Email 
+#                 ,Rating 
+#                 ,Contact_id 
+#                 ,CreateDate 
+#                 from smartfocus.JS_Eloqua_Rating_stg  
+#                 )stg
+#                 on (tbl.Rating = stg.Rating
+#                 and tbl.Email = stg.Email)
+
+
+#                 when not matched then
+#                 insert
+#                 (
+#                 tbl.Sap_id 
+#                 ,tbl.Email 
+#                 ,tbl.Rating 
+#                 ,tbl.Contact_id 
+#                 ,tbl.CreateDate 
+#                 )
+#                 values 
+#                 (
+#             stg.Sap_id 
+#                 ,stg.Email 
+#                 ,stg.Rating 
+#                 ,stg.Contact_id 
+#                 ,stg.CreateDate 
+#                 ) 
+                
+#         ''') 
+
+#         try:
+#             cur.execute(sql_query)
+#         except cx_Oracle.DatabaseError as err:
+#                 error = err.args[0]
+#                 if error.code == 942:
+#                     print('Oracle error message:', error.message)
+#                     print('As DROP statement continuing')
+#                 else:
+#                     raise err
+
+#     merger_sql()
+conn.commit()
+conn.close()
+
